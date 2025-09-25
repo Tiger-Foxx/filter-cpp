@@ -1,0 +1,8 @@
+{
+    "mode": "sequential", 
+    "rules_file": "rules/tiger_rules.json",
+    "log_level": "info",
+    "workers": 4,
+    "http_ports": [80, 443],
+    "nfqueue_num": 0
+  }
