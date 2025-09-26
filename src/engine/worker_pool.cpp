@@ -8,18 +8,14 @@
 #include <iomanip>
 
 WorkerPool::WorkerPool(std::shared_ptr<RuleEngine> rule_engine, size_t num_workers, size_t max_queue_size)
-    : rule_engine_(rule_engine), max_queue_size_(max_queue_size) {
+    : rule_engine_(rule_engine), max_queue_size_(max_queue_size),
+      worker_packet_counts_(num_workers > 0 ? num_workers : GetOptimalWorkerCount()),
+      worker_avg_times_(num_workers > 0 ? num_workers : GetOptimalWorkerCount()) {
     
     if (num_workers == 0) {
         num_workers_ = GetOptimalWorkerCount();
     } else {
         num_workers_ = num_workers;
-    }
-    
-    // Initialize per-worker statistics
-    for (size_t i = 0; i < num_workers_; ++i) {
-        worker_packet_counts_.emplace_back(0);
-        worker_avg_times_.emplace_back(0.0);
     }
     
     std::cout << "🔧 WorkerPool initialized:" << std::endl;

@@ -14,13 +14,10 @@
 // Forward declarations
 class RuleEngine;
 class PacketHandler;
-class MetricsCollector;
+// class MetricsCollector;
 
-enum class FilterMode {
-    SEQUENTIAL,
-    HYBRID,
-    SEQUENTIAL_HYB
-};
+// Forward declaration
+class RuleEngine;
 
 class TigerFoxSystem {
 private:
@@ -32,7 +29,7 @@ private:
     
     std::unique_ptr<RuleEngine> rule_engine_;
     std::unique_ptr<PacketHandler> packet_handler_;
-    std::unique_ptr<MetricsCollector> metrics_;
+    // std::unique_ptr<MetricsCollector> metrics_collector_;
     
     // Signal handling
     static std::atomic<bool> shutdown_requested_;

@@ -1,5 +1,8 @@
 #include "tiger_system.h"
 #include "engine/rule_engine.h"
+#include "engine/sequential_engine.h"
+#include "engine/sequential_hyb_engine.h"
+#include "engine/hybrid_engine.h"
 #include "handlers/packet_handler.h"
 #include "loaders/rule_loader.h"
 #include "utils.h"
@@ -63,17 +66,26 @@ bool TigerFoxSystem::Initialize() {
     // Display rule statistics
     size_t total_rules = 0;
     for (const auto& [layer, rules] : rules_by_layer) {
-        std::cout << "   L" << layer << " rules: " << rules.size() << std::endl;
+        std::cout << "   L" << static_cast<int>(layer) << " rules: " << rules.size() << std::endl;
         total_rules += rules.size();
     }
     std::cout << "   Total rules loaded: " << total_rules << std::endl;
     
     // Initialize rule engine based on mode
-    std::cout << "⚙️  Initializing " << (mode_ == FilterMode::SEQUENTIAL ? "Sequential" :
-                                        mode_ == FilterMode::HYBRID ? "Hybrid Multi-Worker" : 
-                                        "Sequential-Hybrid") << " Rule Engine..." << std::endl;
-    
-    rule_engine_ = std::make_unique<RuleEngine>(rules_by_layer, mode_);
+    switch (mode_) {
+        case FilterMode::SEQUENTIAL:
+            rule_engine_ = std::make_unique<SequentialEngine>(rules_by_layer);
+            break;
+        case FilterMode::SEQUENTIAL_HYB:
+            rule_engine_ = std::make_unique<SequentialHybEngine>(rules_by_layer);
+            break;
+        case FilterMode::HYBRID:
+            rule_engine_ = std::make_unique<HybridEngine>(rules_by_layer);
+            break;
+        default:
+            std::cerr << "❌ Error: Unknown filter mode specified" << std::endl;
+            return false;
+    }
     if (!rule_engine_->Initialize()) {
         std::cerr << "❌ Error: Failed to initialize rule engine" << std::endl;
         return false;

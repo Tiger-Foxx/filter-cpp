@@ -5,6 +5,7 @@
 #include <regex>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <iostream>
 #include <thread>
 
 // String utilities implementation
