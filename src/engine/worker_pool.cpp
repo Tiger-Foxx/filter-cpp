@@ -5,6 +5,7 @@
 #include <iostream>
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 
 WorkerPool::WorkerPool(std::shared_ptr<RuleEngine> rule_engine, size_t num_workers, size_t max_queue_size)
     : rule_engine_(rule_engine), max_queue_size_(max_queue_size) {
@@ -16,12 +17,9 @@ WorkerPool::WorkerPool(std::shared_ptr<RuleEngine> rule_engine, size_t num_worke
     }
     
     // Initialize per-worker statistics
-    worker_packet_counts_.resize(num_workers_);
-    worker_avg_times_.resize(num_workers_);
-    
     for (size_t i = 0; i < num_workers_; ++i) {
-        worker_packet_counts_[i].store(0);
-        worker_avg_times_[i].store(0.0);
+        worker_packet_counts_.emplace_back(0);
+        worker_avg_times_.emplace_back(0.0);
     }
     
     std::cout << "🔧 WorkerPool initialized:" << std::endl;

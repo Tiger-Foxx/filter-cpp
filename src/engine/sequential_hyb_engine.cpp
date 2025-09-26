@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <future>
+#include <iomanip>
 
 SequentialHybEngine::SequentialHybEngine(const std::unordered_map<RuleLayer, std::vector<std::unique_ptr<Rule>>>& rules,
                                         size_t num_rule_workers)

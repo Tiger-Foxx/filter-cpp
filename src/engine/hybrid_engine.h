@@ -51,6 +51,7 @@ private:
     std::atomic<uint64_t> queue_full_drops_{0};
     std::vector<std::atomic<uint64_t>> worker_packet_counts_;
     std::vector<std::atomic<double>> worker_avg_times_;
+    std::atomic<size_t> next_worker_id_{0};
     
     static constexpr size_t MAX_QUEUE_SIZE = 10000; // Par worker
 

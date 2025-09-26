@@ -19,12 +19,14 @@ HybridEngine::HybridEngine(const std::unordered_map<RuleLayer, std::vector<std::
     }
     
     // Initialize per-worker data structures
-    worker_queues_.resize(num_workers_);
-    queue_mutexes_.resize(num_workers_);
-    queue_conditions_.resize(num_workers_);
-    worker_reassemblers_.resize(num_workers_);
-    worker_packet_counts_.resize(num_workers_);
-    worker_avg_times_.resize(num_workers_);
+    for (size_t i = 0; i < num_workers_; ++i) {
+        worker_queues_.emplace_back();
+        queue_mutexes_.emplace_back();
+        queue_conditions_.emplace_back();
+        worker_reassemblers_.push_back(nullptr); // Will be initialized in InitializeWorkers
+        worker_packet_counts_.emplace_back(0);
+        worker_avg_times_.emplace_back(0.0);
+    }
     
     for (size_t i = 0; i < num_workers_; ++i) {
         worker_packet_counts_[i].store(0);
@@ -200,8 +202,10 @@ FilterResult HybridEngine::ProcessPacketSequential(const PacketData& packet, siz
     result.matched_layer = RuleLayer::L7;
     result.early_termination = false;
     
+    FilterResult l3_result, l4_result, l7_result;
+
     // L3 evaluation FIRST - STRICT SEQUENTIAL PER WORKER
-    auto l3_result = EvaluateLayer(RuleLayer::L3, enriched_packet);
+    l3_result = EvaluateLayer(RuleLayer::L3, enriched_packet);
     if (l3_result.action == RuleAction::DROP) {
         result = l3_result;
         result.early_termination = true;
@@ -210,7 +214,7 @@ FilterResult HybridEngine::ProcessPacketSequential(const PacketData& packet, siz
     }
     
     // L4 evaluation - STRICT SEQUENTIAL
-    auto l4_result = EvaluateLayer(RuleLayer::L4, enriched_packet);
+    l4_result = EvaluateLayer(RuleLayer::L4, enriched_packet);
     if (l4_result.action == RuleAction::DROP) {
         result = l4_result;
         result.early_termination = true;
@@ -219,7 +223,7 @@ FilterResult HybridEngine::ProcessPacketSequential(const PacketData& packet, siz
     }
     
     // L7 evaluation - STRICT SEQUENTIAL
-    auto l7_result = EvaluateLayer(RuleLayer::L7, enriched_packet);
+    l7_result = EvaluateLayer(RuleLayer::L7, enriched_packet);
     if (l7_result.action == RuleAction::DROP) {
         result = l7_result;
         result.early_termination = true;

@@ -1,4 +1,4 @@
- # Journal des corrections
+# Journal des corrections
 
 ## Erreur 1: Erreur de configuration de PCRE2
 
@@ -58,3 +58,27 @@
 - **Erreur**: `‘class RuleEngine’ has no member named ‘FilterPacketSequential’`.
 - **Cause**: Appel d'une méthode d'une classe dérivée (`SequentialEngine`) sur un pointeur de la classe de base (`RuleEngine`).
 - **Correction**: Remplacement de l'appel à `FilterPacketSequential` par `FilterPacket` (qui est virtuelle) dans `src/engine/worker_pool.cpp`.
+
+## Erreur 10: En-tête manquant pour `std::setprecision`
+
+- **Erreur**: `‘setprecision’ is not a member of ‘std’`.
+- **Cause**: L'utilisation de `std::setprecision` nécessite l'inclusion de l'en-tête `<iomanip>`.
+- **Correction**: Ajout de `#include <iomanip>` dans les fichiers `sequential_hyb_engine.cpp`, `worker_pool.cpp` et `packet_handler.cpp`.
+
+## Erreur 11: Variable membre non déclarée
+
+- **Erreur**: `‘next_worker_id_’ was not declared in this scope`.
+- **Cause**: La variable membre `next_worker_id_` était utilisée dans `hybrid_engine.cpp` sans avoir été déclarée dans la classe `HybridEngine`.
+- **Correction**: Ajout de la déclaration `std::atomic<size_t> next_worker_id_{0};` dans le fichier d'en-tête `src/engine/hybrid_engine.h`.
+
+## Erreur 12: `goto` croisant une initialisation
+
+- **Erreur**: `jump to label ... crosses initialization of ...`.
+- **Cause**: Dans `hybrid_engine.cpp`, un `goto` sautait par-dessus l'initialisation des variables `l4_result` et `l7_result`.
+- **Correction**: Déplacement de la déclaration des variables au début de la fonction `ProcessPacketSequential` pour qu'elles soient toujours dans la portée du `goto`.
+
+## Erreur 13: Initialisation de vecteurs d'objets non-copiables
+
+- **Erreur**: `static assertion failed: result type must be constructible from value type of input range`.
+- **Cause**: Utilisation de `std::vector::resize` sur des vecteurs contenant des objets qui ne peuvent être ni copiés ni déplacés (ex: `std::mutex`, `std::atomic`, `std::condition_variable`).
+- **Correction**: Remplacement de l'initialisation par `resize` par une boucle `for` qui utilise `emplace_back` ou `push_back` pour construire les objets en place. Corrigé dans `hybrid_engine.cpp` et `worker_pool.cpp`.
