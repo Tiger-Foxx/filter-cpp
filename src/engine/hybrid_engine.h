@@ -36,9 +36,9 @@ class HybridEngine : public RuleEngine {
 private:
     // Multi-worker architecture avec hash dispatch
     std::vector<std::thread> worker_threads_;
-    std::vector<std::queue<std::unique_ptr<WorkItem>>> worker_queues_;
-    std::vector<std::mutex> queue_mutexes_;
-    std::vector<std::condition_variable> queue_conditions_;
+    std::vector<std::unique_ptr<std::queue<std::unique_ptr<WorkItem>>>> worker_queues_;
+    std::vector<std::unique_ptr<std::mutex>> queue_mutexes_;
+    std::vector<std::unique_ptr<std::condition_variable>> queue_conditions_;
     std::atomic<bool> workers_running_{false};
     
     // Chaque worker a son propre TCP reassembler pour éviter les locks
@@ -51,7 +51,7 @@ private:
     std::atomic<uint64_t> queue_full_drops_{0};
     std::vector<std::atomic<uint64_t>> worker_packet_counts_;
     std::vector<std::atomic<double>> worker_avg_times_;
-    std::atomic<size_t> next_worker_id_{0};
+    mutable std::atomic<size_t> next_worker_id_{0};
     
     static constexpr size_t MAX_QUEUE_SIZE = 10000; // Par worker
 

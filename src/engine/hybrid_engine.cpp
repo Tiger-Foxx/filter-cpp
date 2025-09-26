@@ -20,9 +20,9 @@ HybridEngine::HybridEngine(const std::unordered_map<RuleLayer, std::vector<std::
     
     // Initialize per-worker data structures
     for (size_t i = 0; i < num_workers_; ++i) {
-        worker_queues_.emplace_back();
-        queue_mutexes_.emplace_back();
-        queue_conditions_.emplace_back();
+        worker_queues_.push_back(std::make_unique<std::queue<std::unique_ptr<WorkItem>>>());
+        queue_mutexes_.push_back(std::make_unique<std::mutex>());
+        queue_conditions_.push_back(std::make_unique<std::condition_variable>());
         worker_reassemblers_.push_back(nullptr); // Will be initialized in InitializeWorkers
         worker_packet_counts_.emplace_back(0);
         worker_avg_times_.emplace_back(0.0);
@@ -130,16 +130,16 @@ void HybridEngine::WorkerLoop(size_t worker_id) {
         
         // Attendre du travail
         {
-            std::unique_lock<std::mutex> lock(queue_mutexes_[worker_id]);
-            queue_conditions_[worker_id].wait(lock, [this, worker_id] {
-                return !worker_queues_[worker_id].empty() || !workers_running_.load();
+            std::unique_lock<std::mutex> lock(*queue_mutexes_[worker_id]);
+            queue_conditions_[worker_id]->wait(lock, [this, worker_id] {
+                return !worker_queues_[worker_id]->empty() || !workers_running_.load();
             });
             
             if (!workers_running_.load()) break;
             
-            if (!worker_queues_[worker_id].empty()) {
-                work_item = std::move(worker_queues_[worker_id].front());
-                worker_queues_[worker_id].pop();
+            if (!worker_queues_[worker_id]->empty()) {
+                work_item = std::move(worker_queues_[worker_id]->front());
+                worker_queues_[worker_id]->pop();
             }
         }
         
@@ -248,15 +248,15 @@ finalize_worker:
 }
 
 bool HybridEngine::EnqueueWork(size_t worker_id, std::unique_ptr<WorkItem> work) {
-    std::lock_guard<std::mutex> lock(queue_mutexes_[worker_id]);
+    std::lock_guard<std::mutex> lock(*queue_mutexes_[worker_id]);
     
-    if (worker_queues_[worker_id].size() >= MAX_QUEUE_SIZE) {
+    if (worker_queues_[worker_id]->size() >= MAX_QUEUE_SIZE) {
         queue_full_drops_.fetch_add(1, std::memory_order_relaxed);
         return false; // Queue pleine
     }
     
-    worker_queues_[worker_id].push(std::move(work));
-    queue_conditions_[worker_id].notify_one();
+    worker_queues_[worker_id]->push(std::move(work));
+    queue_conditions_[worker_id]->notify_one();
     
     return true;
 }
@@ -295,7 +295,7 @@ void HybridEngine::ShutdownWorkers() {
     
     // Wake up all workers
     for (size_t i = 0; i < num_workers_; ++i) {
-        queue_conditions_[i].notify_all();
+        queue_conditions_[i]->notify_all();
     }
     
     // Wait for all workers to finish
@@ -309,9 +309,9 @@ void HybridEngine::ShutdownWorkers() {
     
     // Clear remaining queues
     for (size_t i = 0; i < num_workers_; ++i) {
-        std::lock_guard<std::mutex> lock(queue_mutexes_[i]);
-        while (!worker_queues_[i].empty()) {
-            worker_queues_[i].pop();
+        std::lock_guard<std::mutex> lock(*queue_mutexes_[i]);
+        while (!worker_queues_[i]->empty()) {
+            worker_queues_[i]->pop();
         }
     }
     

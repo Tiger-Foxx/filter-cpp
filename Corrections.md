@@ -1,4 +1,4 @@
-# Journal des corrections
+ # Journal des corrections
 
 ## Erreur 1: Erreur de configuration de PCRE2
 
@@ -80,5 +80,11 @@
 ## Erreur 13: Initialisation de vecteurs d'objets non-copiables
 
 - **Erreur**: `static assertion failed: result type must be constructible from value type of input range`.
-- **Cause**: Utilisation de `std::vector::resize` sur des vecteurs contenant des objets qui ne peuvent être ni copiés ni déplacés (ex: `std::mutex`, `std::atomic`, `std::condition_variable`).
-- **Correction**: Remplacement de l'initialisation par `resize` par une boucle `for` qui utilise `emplace_back` ou `push_back` pour construire les objets en place. Corrigé dans `hybrid_engine.cpp` et `worker_pool.cpp`.
+- **Cause**: Utilisation de `std::vector::resize` ou `emplace_back` sur des vecteurs contenant des objets qui ne peuvent être ni copiés ni déplacés (ex: `std::mutex`, `std::condition_variable`).
+- **Correction**: Remplacement du stockage direct des objets (ex: `std::vector<std::mutex>`) par un stockage via des pointeurs intelligents (ex: `std::vector<std::unique_ptr<std::mutex>>`). Les objets sont ensuite alloués dynamiquement avec `std::make_unique`. Corrigé dans `hybrid_engine.h` et `hybrid_engine.cpp`.
+
+## Erreur 14: Modification d'un membre atomique dans une méthode `const`
+
+- **Erreur**: `passing 'const std::atomic<...>' as 'this' argument discards qualifiers`.
+- **Cause**: Une méthode déclarée `const` (`DispatchToWorkerOptimized`) tentait de modifier une variable membre atomique (`next_worker_id_`) via `fetch_add`.
+- **Correction**: Déclaration de la variable membre `next_worker_id_` comme `mutable` dans `hybrid_engine.h` pour autoriser sa modification dans les méthodes `const`.
