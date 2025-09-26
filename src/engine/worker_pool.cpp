@@ -242,7 +242,7 @@ void WorkerPool::WorkerLoop(size_t worker_id) {
         
         try {
             // Use rule engine to filter packet (sequential mode within worker)
-            FilterResult result = rule_engine_->FilterPacketSequential(work_item->packet_data);
+            FilterResult result = rule_engine_->FilterPacket(work_item->packet_data);
             
             double processing_time_ms = timer.ElapsedMilliseconds();
             

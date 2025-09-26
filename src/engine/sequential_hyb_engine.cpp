@@ -36,9 +36,9 @@ FilterResult SequentialHybEngine::FilterPacket(const PacketData& packet) {
 
 FilterResult SequentialHybEngine::EvaluateSequentialHyb(const PacketData& packet) {
     HighResTimer timer;
-    
+
     stats_->total_packets.fetch_add(1, std::memory_order_relaxed);
-    
+
     // Check cache first
     size_t packet_hash = HashPacketData(packet);
     FilterResult cached_result;
@@ -46,51 +46,47 @@ FilterResult SequentialHybEngine::EvaluateSequentialHyb(const PacketData& packet
         stats_->cache_hits.fetch_add(1, std::memory_order_relaxed);
         return cached_result;
     }
-    
+
     FilterResult result;
     result.action = RuleAction::ACCEPT;
     result.rule_id = "default";
     result.matched_layer = RuleLayer::L7;
     result.early_termination = false;
-    
+
     // L3 evaluation with rule parallelization
     auto l3_result = EvaluateLayerParallel(RuleLayer::L3, packet);
     if (l3_result.action == RuleAction::DROP) {
         result = l3_result;
         result.early_termination = true;
         stats_->l3_drops.fetch_add(1, std::memory_order_relaxed);
-        goto finalize_hyb;
+    } else {
+        // L4 evaluation with rule parallelization
+        auto l4_result = EvaluateLayerParallel(RuleLayer::L4, packet);
+        if (l4_result.action == RuleAction::DROP) {
+            result = l4_result;
+            result.early_termination = true;
+            stats_->l4_drops.fetch_add(1, std::memory_order_relaxed);
+        } else {
+            // L7 evaluation with rule parallelization
+            auto l7_result = EvaluateLayerParallel(RuleLayer::L7, packet);
+            if (l7_result.action == RuleAction::DROP) {
+                result = l7_result;
+                result.early_termination = true;
+                stats_->l7_drops.fetch_add(1, std::memory_order_relaxed);
+            } else {
+                stats_->accepted_packets.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
     }
-    
-    // L4 evaluation with rule parallelization
-    auto l4_result = EvaluateLayerParallel(RuleLayer::L4, packet);
-    if (l4_result.action == RuleAction::DROP) {
-        result = l4_result;
-        result.early_termination = true;
-        stats_->l4_drops.fetch_add(1, std::memory_order_relaxed);
-        goto finalize_hyb;
-    }
-    
-    // L7 evaluation with rule parallelization
-    auto l7_result = EvaluateLayerParallel(RuleLayer::L7, packet);
-    if (l7_result.action == RuleAction::DROP) {
-        result = l7_result;
-        result.early_termination = true;
-        stats_->l7_drops.fetch_add(1, std::memory_order_relaxed);
-        goto finalize_hyb;
-    }
-    
-    stats_->accepted_packets.fetch_add(1, std::memory_order_relaxed);
-    
-finalize_hyb:
+
     result.decision_time_ms = timer.ElapsedMilliseconds();
     stats_->total_decision_time.fetch_add(result.decision_time_ms, std::memory_order_relaxed);
-    
+
     if (result.action == RuleAction::DROP) {
         stats_->dropped_packets.fetch_add(1, std::memory_order_relaxed);
         stats_->UpdateRuleMatch(result.rule_id);
     }
-    
+
     CacheResult(packet_hash, result);
     return result;
 }

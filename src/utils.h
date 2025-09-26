@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <string>
+#include <thread>
 #include <vector>
 #include <chrono>
 #include <mutex>
@@ -44,7 +45,12 @@ private:
 public:
     void Update(double time_ms) {
         count_.fetch_add(1, std::memory_order_relaxed);
-        total_time_.fetch_add(time_ms, std::memory_order_relaxed);
+        
+        // Atomically add to total_time_
+        double current_total = total_time_.load();
+        while (!total_time_.compare_exchange_weak(current_total, current_total + time_ms)) {
+            // Loop until the update is successful
+        }
         
         // Update min/max with compare-exchange
         double current_min = min_time_.load();

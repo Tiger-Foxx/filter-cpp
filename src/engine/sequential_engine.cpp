@@ -1,6 +1,7 @@
 #include "sequential_engine.h"
 #include "../utils.h"
 
+#include <iomanip>
 #include <iostream>
 
 SequentialEngine::SequentialEngine(const std::unordered_map<RuleLayer, std::vector<std::unique_ptr<Rule>>>& rules)
@@ -24,9 +25,9 @@ FilterResult SequentialEngine::FilterPacket(const PacketData& packet) {
 
 FilterResult SequentialEngine::EvaluateSequential(const PacketData& packet) {
     HighResTimer timer;
-    
+
     stats_->total_packets.fetch_add(1, std::memory_order_relaxed);
-    
+
     // Check cache first
     size_t packet_hash = HashPacketData(packet);
     FilterResult cached_result;
@@ -34,70 +35,66 @@ FilterResult SequentialEngine::EvaluateSequential(const PacketData& packet) {
         stats_->cache_hits.fetch_add(1, std::memory_order_relaxed);
         return cached_result;
     }
-    
+
     FilterResult result;
     result.action = RuleAction::ACCEPT;
     result.rule_id = "default";
     result.matched_layer = RuleLayer::L7;
     result.early_termination = false;
-    
+
     // L3 evaluation first - STRICT ORDER
     HighResTimer l3_timer;
     auto l3_result = EvaluateLayer(RuleLayer::L3, packet);
     double l3_time = l3_timer.ElapsedMilliseconds();
-    
+
     l3_evaluations_.fetch_add(1, std::memory_order_relaxed);
     l3_total_time_.fetch_add(l3_time, std::memory_order_relaxed);
-    
+
     if (l3_result.action == RuleAction::DROP) {
         result = l3_result;
         result.early_termination = true;
         stats_->l3_drops.fetch_add(1, std::memory_order_relaxed);
-        goto finalize;
+    } else {
+        // L4 evaluation - STRICT ORDER
+        HighResTimer l4_timer;
+        auto l4_result = EvaluateLayer(RuleLayer::L4, packet);
+        double l4_time = l4_timer.ElapsedMilliseconds();
+
+        l4_evaluations_.fetch_add(1, std::memory_order_relaxed);
+        l4_total_time_.fetch_add(l4_time, std::memory_order_relaxed);
+
+        if (l4_result.action == RuleAction::DROP) {
+            result = l4_result;
+            result.early_termination = true;
+            stats_->l4_drops.fetch_add(1, std::memory_order_relaxed);
+        } else {
+            // L7 evaluation - STRICT ORDER
+            HighResTimer l7_timer;
+            auto l7_result = EvaluateLayer(RuleLayer::L7, packet);
+            double l7_time = l7_timer.ElapsedMilliseconds();
+
+            l7_evaluations_.fetch_add(1, std::memory_order_relaxed);
+            l7_total_time_.fetch_add(l7_time, std::memory_order_relaxed);
+
+            if (l7_result.action == RuleAction::DROP) {
+                result = l7_result;
+                result.early_termination = true;
+                stats_->l7_drops.fetch_add(1, std::memory_order_relaxed);
+            } else {
+                // All layers passed
+                stats_->accepted_packets.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
     }
-    
-    // L4 evaluation - STRICT ORDER  
-    HighResTimer l4_timer;
-    auto l4_result = EvaluateLayer(RuleLayer::L4, packet);
-    double l4_time = l4_timer.ElapsedMilliseconds();
-    
-    l4_evaluations_.fetch_add(1, std::memory_order_relaxed);
-    l4_total_time_.fetch_add(l4_time, std::memory_order_relaxed);
-    
-    if (l4_result.action == RuleAction::DROP) {
-        result = l4_result;
-        result.early_termination = true;
-        stats_->l4_drops.fetch_add(1, std::memory_order_relaxed);
-        goto finalize;
-    }
-    
-    // L7 evaluation - STRICT ORDER
-    HighResTimer l7_timer;
-    auto l7_result = EvaluateLayer(RuleLayer::L7, packet);
-    double l7_time = l7_timer.ElapsedMilliseconds();
-    
-    l7_evaluations_.fetch_add(1, std::memory_order_relaxed);
-    l7_total_time_.fetch_add(l7_time, std::memory_order_relaxed);
-    
-    if (l7_result.action == RuleAction::DROP) {
-        result = l7_result;
-        result.early_termination = true;
-        stats_->l7_drops.fetch_add(1, std::memory_order_relaxed);
-        goto finalize;
-    }
-    
-    // All layers passed
-    stats_->accepted_packets.fetch_add(1, std::memory_order_relaxed);
-    
-finalize:
+
     result.decision_time_ms = timer.ElapsedMilliseconds();
     stats_->total_decision_time.fetch_add(result.decision_time_ms, std::memory_order_relaxed);
-    
+
     if (result.action == RuleAction::DROP) {
         stats_->dropped_packets.fetch_add(1, std::memory_order_relaxed);
         stats_->UpdateRuleMatch(result.rule_id);
     }
-    
+
     CacheResult(packet_hash, result);
     return result;
 }

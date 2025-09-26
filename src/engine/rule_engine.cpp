@@ -209,10 +209,10 @@ bool RuleEngine::EvaluateL3Rule(const Rule& rule, const PacketData& packet) {
         case RuleType::IP_SRC_COUNTRY:
             // Simplified geo-IP check (would need GeoIP database in real implementation)
             for (const auto& country : rule.values) {
-                if (country == "CN" && (packet.src_ip.starts_with("220.") || packet.src_ip.starts_with("221."))) return true;
-                if (country == "RU" && (packet.src_ip.starts_with("94.") || packet.src_ip.starts_with("95."))) return true;
-                if (country == "IR" && packet.src_ip.starts_with("5.")) return true;
-                if (country == "KP" && packet.src_ip.starts_with("175.45.")) return true;
+                if (country == "CN" && (packet.src_ip.rfind("220.", 0) == 0 || packet.src_ip.rfind("221.", 0) == 0)) return true;
+                if (country == "RU" && (packet.src_ip.rfind("94.", 0) == 0 || packet.src_ip.rfind("95.", 0) == 0)) return true;
+                if (country == "IR" && packet.src_ip.rfind("5.", 0) == 0) return true;
+                if (country == "KP" && packet.src_ip.rfind("175.45.", 0) == 0) return true;
             }
             return false;
             

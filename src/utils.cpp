@@ -40,9 +40,8 @@ namespace StringUtils {
     }
     
     bool StartsWith(const std::string& str, const std::string& prefix) {
-        return str.size() >= prefix.size() && 
-               str.compare(0, prefix.size(), prefix) == 0;
-    }
+    return str.rfind(prefix, 0) == 0;
+}
     
     bool EndsWith(const std::string& str, const std::string& suffix) {
         return str.size() >= suffix.size() && 

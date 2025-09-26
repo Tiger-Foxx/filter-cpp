@@ -1,6 +1,8 @@
 #ifndef WORKER_POOL_H
 #define WORKER_POOL_H
 
+#include "rule_engine.h"
+
 #include <vector>
 #include <thread>
 #include <queue>
@@ -13,8 +15,6 @@
 
 // Forward declarations
 class RuleEngine;
-struct PacketData;
-struct FilterResult;
 
 // Work item for packet processing
 struct PacketWorkItem {
@@ -36,7 +36,7 @@ private:
     
     // Work queue
     std::queue<std::unique_ptr<PacketWorkItem>> work_queue_;
-    std::mutex queue_mutex_;
+    mutable std::mutex queue_mutex_;
     std::condition_variable queue_condition_;
     std::atomic<bool> workers_running_{false};
     

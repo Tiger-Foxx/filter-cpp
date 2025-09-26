@@ -72,6 +72,7 @@ add_executable(tiger-fox ${SOURCES})
 
 # Définitions du préprocesseur
 target_compile_definitions(tiger-fox PRIVATE
+    PCRE2_CODE_UNIT_WIDTH=8
     TIGER_FOX_VERSION_MAJOR=2
     TIGER_FOX_VERSION_MINOR=0
     TIGER_FOX_VERSION_PATCH=0

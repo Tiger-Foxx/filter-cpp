@@ -2,6 +2,8 @@
 #include "../handlers/tcp_reassembler.h"
 #include "../utils.h"
 
+#include <iomanip>
+#include <future>
 #include <iostream>
 #include <algorithm>
 #include <chrono>
@@ -180,7 +182,7 @@ FilterResult HybridEngine::ProcessPacketSequential(const PacketData& packet, siz
          packet.dst_port == 8080 || packet.dst_port == 8443)) {
         
         // Utiliser le reassembler de ce worker (pas de locks)
-        auto http_data = worker_reassemblers_[worker_id]->ProcessPacketForHTTP(packet);
+        auto http_data = worker_reassemblers_[worker_id]->ProcessPacket(reinterpret_cast<unsigned char*>(&enriched_packet), sizeof(enriched_packet), enriched_packet);
         if (http_data) {
             enriched_packet.http_method = http_data->method;
             enriched_packet.http_uri = http_data->uri;

@@ -80,6 +80,7 @@ private:
     
     // Hash-based dispatch
     size_t DispatchToWorker(uint32_t flow_hash) const;
+    size_t DispatchToWorkerOptimized(const PacketData& packet) const;
     bool EnqueueWork(size_t worker_id, std::unique_ptr<WorkItem> work);
     
     // Per-worker processing (séquentiel L3→L4→L7 par worker)

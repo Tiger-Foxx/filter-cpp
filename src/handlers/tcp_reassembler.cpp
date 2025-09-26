@@ -1,4 +1,5 @@
 #include "tcp_reassembler.h"
+#include "../engine/rule_engine.h"
 #include "../utils.h"
 
 #include <iostream>

@@ -7,6 +7,7 @@
 #include <string>
 #include <atomic>
 #include <mutex>
+#define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
 // Forward declarations
