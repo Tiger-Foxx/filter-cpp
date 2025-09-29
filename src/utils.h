@@ -8,6 +8,13 @@
 #include <mutex>
 #include <atomic>
 
+// Enum for specifying the filtering mode
+enum class FilterMode {
+    SEQUENTIAL,
+    HYBRID,
+    SEQUENTIAL_HYB
+};
+
 // High-resolution timing utilities
 class HighResTimer {
 private:

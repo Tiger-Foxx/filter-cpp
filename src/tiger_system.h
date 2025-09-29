@@ -11,6 +11,8 @@
 #include <iostream>
 #include <signal.h>
 
+#include "utils.h"
+
 // Forward declarations
 class RuleEngine;
 class PacketHandler;

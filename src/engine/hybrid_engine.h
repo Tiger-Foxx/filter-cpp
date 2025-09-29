@@ -3,7 +3,7 @@
 
 #include "rule_engine.h"
 #include <memory>
-#include <vector>
+#include <deque>
 #include <thread>
 #include <queue>
 #include <mutex>
@@ -49,8 +49,8 @@ private:
     // Performance tracking spécifique hybrid
     std::atomic<uint64_t> dispatched_packets_{0};
     std::atomic<uint64_t> queue_full_drops_{0};
-    std::vector<std::atomic<uint64_t>> worker_packet_counts_;
-    std::vector<std::atomic<double>> worker_avg_times_;
+    std::deque<std::atomic<uint64_t>> worker_packet_counts_;
+    std::deque<std::atomic<double>> worker_avg_times_;
     mutable std::atomic<size_t> next_worker_id_{0};
     
     static constexpr size_t MAX_QUEUE_SIZE = 10000; // Par worker
