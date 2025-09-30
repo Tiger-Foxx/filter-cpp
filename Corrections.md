@@ -1,4 +1,4 @@
- # Journal des corrections
+# Journal des corrections
 
 ## Erreur 1: Erreur de configuration de PCRE2
 
@@ -88,3 +88,21 @@
 - **Erreur**: `passing 'const std::atomic<...>' as 'this' argument discards qualifiers`.
 - **Cause**: Une méthode déclarée `const` (`DispatchToWorkerOptimized`) tentait de modifier une variable membre atomique (`next_worker_id_`) via `fetch_add`.
 - **Correction**: Déclaration de la variable membre `next_worker_id_` comme `mutable` dans `hybrid_engine.h` pour autoriser sa modification dans les méthodes `const`.
+
+## Erreur 15: Type `FilterMode` non défini
+
+-   **Erreur**: `‘FilterMode’ does not name a type`.
+-   **Cause**: L'énumération `FilterMode` était utilisée dans plusieurs fichiers (`tiger_system.h`, `main.cpp`) sans avoir été définie, provoquant une cascade d'erreurs de compilation.
+-   **Correction**: Ajout de la définition de `enum class FilterMode` dans le fichier d'utilitaires `src/utils.h` et inclusion de cet en-tête (`#include "utils.h"`) dans `src/tiger_system.h`.
+
+## Erreur 16: Erreur de construction de `std::vector<std::atomic<...>>`
+
+-   **Erreur**: `static assertion failed: result type must be constructible from value type of input range` dans `hybrid_engine.cpp`.
+-   **Cause**: Le code tentait de remplir un `std::vector` d'objets `std::atomic`. Les types atomiques ne sont ni copiables ni déplaçables, ce qui est requis par `std::vector` lors d'une réallocation de mémoire.
+-   **Correction**: Remplacement du conteneur `std::vector` par `std::deque` pour les membres `worker_packet_counts_` et `worker_avg_times_` dans `hybrid_engine.h`. `std::deque` n'a pas besoin de déplacer les éléments existants lors de l'ajout de nouveaux, ce qui est compatible avec les types `std::atomic`.
+
+## Erreur 17: Définition multiple de `FilterMode`
+
+-   **Erreur**: `error: multiple definition of ‘enum class FilterMode’`.
+-   **Cause**: L'énumération `FilterMode` était définie à la fois dans `src/utils.h` et `src/engine/rule_engine.h`. L'inclusion de ces deux fichiers dans la même unité de compilation provoquait une erreur de linkage due à la définition en double.
+-   **Correction**: Suppression de la définition de `FilterMode` du fichier `src/engine/rule_engine.h` et ajout d'un `#include "../utils.h"` pour utiliser la définition centralisée dans `utils.h`.

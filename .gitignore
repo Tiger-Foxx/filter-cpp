@@ -7,4 +7,5 @@ build/*
 *CMakeFiles/
 *CMakeCache.txt
 note.txt
+text.txt
 

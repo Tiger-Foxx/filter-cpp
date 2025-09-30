@@ -9,15 +9,10 @@
 #include <mutex>
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+#include "../utils.h"
 
 // Forward declarations
 struct PacketData;
-
-enum class FilterMode {
-    SEQUENTIAL,        // Mode séquentiel : L3→L4→L7 strict
-    HYBRID,           // Mode multi-worker avec hash dispatch
-    SEQUENTIAL_HYB    // Mode séquentiel + parallélisme règles
-};
 
 enum class RuleAction {
     DROP,
